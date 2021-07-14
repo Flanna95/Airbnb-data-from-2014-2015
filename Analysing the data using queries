@@ -1,0 +1,260 @@
+--Unique property types in the dataset
+SELECT DISTINCT
+UNNEST(REGEXP_SPLIT_TO_ARRAY(LTRIM(filter_room_types, ','), ','))
+AS property_type FROM airbnb_searches;
+
+--Rank each host based on the number of beds they have listed. 
+--The host with the most beds should be ranked 1 and the host with the least number of beds should be ranked last. 
+--Hosts that have the same number of beds should have the same rank. A host can also own multiple properties. 
+SELECT host_id, SUM(n_beds) AS number_of_beds,
+DENSE_RANK() OVER(ORDER BY SUM(n_beds) DESC) AS rank FROM
+airbnb_apartments 
+GROUP BY host_id
+ORDER BY SUM(n_beds) DESC;
+
+--The city with the most amenities across all the host's properties
+SELECT city FROM
+(SELECT city, SUM(LENGTH(amenities)) AS total_amenities FROM
+airbnb_search_details
+GROUP BY city
+ORDER BY total_amenities DESC
+LIMIT 1) AS city_with_most_amenities;
+
+--The average number of bathrooms and bedrooms for every city and property type
+SELECT city, property_type, ROUND(AVG(bathrooms),2) AS n_bathrooms_avg,
+ ROUND(AVG(bedrooms),2) AS n_bedrooms_avg FROM airbnb_search_details
+ GROUP BY city, property_type;
+ 
+ --The top five hotels with the highest total reviews given by the most active reviewer. 
+SELECT hotel_name, hotel_address, MAX(total_number_of_reviews_reviewer_has_given) AS max_total_reviews FROM hotel_reviews
+GROUP BY hotel_name, hotel_address
+ORDER BY max_total_reviews DESC
+LIMIT 5;
+
+--Countries with positive reviewes sorted in ascending order on the basis of the number of positive reviews 
+SELECT reviewer_nationality AS country, COUNT(positive_review) AS n_positive_reviews FROM hotel_reviews
+WHERE positive_review != 'No Positive'
+GROUP BY reviewer_nationality
+ORDER BY n_positive_reviews DESC;
+
+--Countries with negative reviewes sorted in descending order on the basis of the number of negative reviews 
+SELECT reviewer_nationality AS country, COUNT(negative_review) AS n_negative_reviews FROM hotel_reviews
+WHERE negative_review != 'No Negative'
+GROUP BY reviewer_nationality
+ORDER BY n_negative_reviews DESC;
+
+--The top ten hotels with the most positive reviews in the summer (June-Aug) of 2017 
+SELECT hotel_name, hotel_address, COUNT(positive_review) AS n_positive_reviews FROM hotel_reviews 
+WHERE positive_review != 'No Positive' AND
+review_date BETWEEN '2017-06-01' AND '2017-08-31'
+GROUP BY hotel_name, hotel_address
+ORDER BY n_positive_reviews DESC
+LIMIT 10;
+
+--The top ten hotels with the most negative reviews in the summer (June-Aug) of 2017 
+SELECT hotel_name, hotel_address, COUNT(negative_review) AS n_negative_reviews FROM hotel_reviews 
+WHERE negative_review != 'No Negative' AND
+review_date BETWEEN '2017-06-01' AND '2017-08-31'
+GROUP BY hotel_name, hotel_address
+ORDER BY n_negative_reviews DESC
+LIMIT 10;
+
+--Ten hotels with the lowest ratings
+SELECT DISTINCT hotel_name, average_score FROM hotel_reviews 
+ORDER BY average_score 
+LIMIT 10;
+
+--Ten hotels with the highest ratings
+SELECT DISTINCT hotel_name, average_score FROM hotel_reviews
+ORDER BY average_score DESC
+LIMIT 10;
+
+--The room types that are searched by most people
+SELECT LTRIM(filter_room_types, ',') AS cleaned_filter, 
+SUM(n_searches) AS sum_searches FROM airbnb_searches
+GROUP BY cleaned_filter
+ORDER BY sum_searches DESC;
+--Here we use the LTRIM to get rid of the comma at the beginning of some entries in the filter _room_types column.
+--You can confirm this by running the below query.
+SELECT DISTINCT filter_room_types FROM airbnb_searches;
+
+--The day of the week that most people want to check-in
+SELECT TO_CHAR(ds_checkin, 'Day') AS day_of_week,
+COUNT(DISTINCT id_guest) AS checkin_count FROM airbnb_contacts
+GROUP BY day_of_week
+ORDER BY checkin_count DESC
+LIMIT 1;
+
+--The number of nights that are searched by most people when trying to book a host
+SELECT n_nights, SUM(n_searches) AS total_searches FROM airbnb_searches
+GROUP BY n_nights
+ORDER BY n_nights;
+
+--Average number of searches from each user
+SELECT id_user, AVG(n_searches) AS n_average_searches FROM airbnb_searches
+GROUP BY id_user
+ORDER BY id_user;
+
+--The table consists of search results and outputs host information for searchers. 
+--Find the minimum, average, maximum rental prices for each host’s popularity rating. 
+--The host’s popularity rating is defined as below:
+--0 reviews: New
+--1 to 5 reviews: Rising
+--6 to 15 reviews: Trending Up
+--16 to 40 reviews: Popular
+--more than 40 reviews: Hot
+--Tip: The `id` column in the table refers to the search ID. 
+--I have created the host_id by concating price, room_type, host_since, zipcode, and number_of_reviews.
+ SELECT host_pop_rating, MIN(price) AS min_price, 
+ ROUND(AVG(price),2) AS avg_price, MAX(price) AS max_price FROM 
+(SELECT DISTINCT (price||room_type||host_since||zipcode||number_of_reviews) AS host_id, price,
+ CASE WHEN number_of_reviews = 0 OR number_of_reviews IS NULL THEN 'New'
+ WHEN number_of_reviews BETWEEN 1 AND 5 THEN 'Rising'
+ WHEN number_of_reviews BETWEEN 6 AND 15 THEN 'Trending Up'
+ WHEN number_of_reviews BETWEEN 16 AND 40 THEN 'Popular'
+ WHEN number_of_reviews > 40 THEN 'Hot' END AS host_pop_rating FROM 
+ airbnb_search_details) AS a
+ GROUP BY host_pop_rating;
+  
+--The total number of available beds per hosts' nationality 
+SELECT nationality, SUM(n_beds) AS total_beds_available FROM 
+airbnb_apartments 
+INNER JOIN airbnb_hosts
+ON airbnb_apartments.host_id = airbnb_hosts.host_id
+GROUP BY nationality
+ORDER BY total_beds_available DESC;
+
+
+--The total number of housing units completed for each year. 
+SELECT year, SUM(south + west + midwest + northeast) AS n_units
+FROM housing_units_completed_us
+GROUP BY year
+ORDER BY year;
+
+--The total number of reviews for each review score earned by 'Hotel Arena' 
+SELECT hotel_name, reviewer_score, COUNT(reviewer_score) AS count FROM hotel_reviews
+WHERE hotel_name = 'Hotel Arena'
+GROUP BY hotel_name, reviewer_score;
+
+--Rank guests based on their ages (Medium)
+SELECT guest_id,
+RANK() OVER(ORDER BY age DESC) AS rank FROM airbnb_guests
+ORDER BY age DESC;
+
+--Rank guests based on the number of messages they've exchanged with the hosts. 
+--Guests with the same number of messages as other guests should have the same rank. 
+--Do not skip rankings if the preceding rankings are identical.
+SELECT id_guest, SUM(n_messages) AS sum_n_messages,
+DENSE_RANK() OVER(ORDER BY SUM(n_messages) DESC) AS ranking
+FROM airbnb_contacts
+GROUP BY id_guest
+ORDER BY SUM(n_messages) DESC;
+
+--The acceptance rate of requests is defined as the ratio of accepted contacts vs all contacts.
+--Tip: Multiply the ratio by 100 to get the rate
+SELECT 100*
+SUM(CASE WHEN ts_accepted_at IS NOT NULL THEN 1 ELSE 0 END)/
+COUNT(*) AS acceptance_rate FROM airbnb_contacts;
+
+--The number of apartments per nationality that are owned by people under 30 years old. 
+--Output the nationality along with the number of apartments.
+--Tip: Perform a join between airbnb_hosts and airbnb_units
+SELECT nationality, COUNT(*) AS apartment_count FROM airbnb_hosts
+INNER JOIN airbnb_units
+ON airbnb_hosts.host_id = airbnb_units.host_id
+WHERE unit_type = 'Apartment' AND age < 30
+GROUP BY nationality
+ORDER BY apartment_count DESC;
+ CREATE TABLE public.airbnb_reviews
+(from_user INTEGER,
+ to_user INTEGER,
+ from_type VARCHAR,
+ to_type VARCHAR,
+ review_score INTEGER);
+ 
+--Matching reviewers in a way that each host is paired with a matching guest based on the given review scores. 
+--Eg.pair a guest reviewer who gave 1 with a host reviewer who gave the same score.
+--Present distinct review scores only.
+ SELECT DISTINCT ON (review_score)
+host_id, guest_id, a.review_score FROM
+(SELECT from_user AS host_id, review_score FROM airbnb_reviews
+WHERE from_type = 'host') AS a
+INNER JOIN
+(SELECT from_user AS guest_id, review_score FROM airbnb_reviews
+WHERE from_type = 'guest') AS b
+ON a.review_score = b.review_score
+ORDER BY review_score DESC;
+
+--Which gender gives a higher average review score when writing reviews as guests. 
+--Tip: I used the `from_type` column to identify guest reviews. 
+--Perform a join between airbnb_reviews and airbnb_guests
+SELECT gender, ROUND(AVG(review_score),2) AS avg_score FROM airbnb_reviews
+INNER JOIN airbnb_guests
+ON airbnb_reviews.from_user = airbnb_guests.guest_id
+WHERE from_type = 'guest'
+GROUP BY gender
+ORDER BY avg_score DESC
+LIMIT 1;
+
+--Display the number of times a user performed a search which led to a successful booking 
+--and the number of times a user performed a search but did not lead to a booking. 
+--The output should have a column named action with values 'does not book' and 'books' 
+--as well as a 2nd column named average_searches with the average number of searches per action. 
+--Consider that the booking did not happen if the booking date is null.
+--Tip: Perform a join between airbnb_contacts & airbnb_searches
+SELECT 
+CASE WHEN ts_booking_at IS NOT NULL THEN 'books' ELSE 'does not book' END AS action, 
+ROUND(AVG(n_searches),2) AS avgerage_searches FROM
+airbnb_searches
+INNER JOIN airbnb_contacts ON
+airbnb_searches.id_user = airbnb_contacts.id_guest
+GROUP BY action;
+
+--Average age of guests reviewed by each host.
+SELECT from_user, round(AVG(age),2) AS average_age FROM airbnb_reviews
+INNER JOIN airbnb_guests
+ON airbnb_reviews.to_user = airbnb_guests.guest_id
+WHERE from_type = 'host'
+GROUP BY from_user
+ORDER BY from_user;
+
+--Do hosts or guests give higher review scores based on their average review scores? 
+SELECT from_type, ROUND(AVG(review_score),2) AS winner FROM airbnb_reviews
+GROUP BY from_type
+ORDER BY winner DESC
+LIMIT 1;
+
+--The number of hosts that have apartments in countries of which they are not citizens.
+SELECT COUNT(DISTINCT airbnb_hosts.host_id) AS count FROM airbnb_hosts 
+INNER JOIN airbnb_apartments
+ON airbnb_hosts.host_id = airbnb_apartments.host_id
+AND nationality != country;
+
+--Estimate the growth of Airbnb each year using the number of hosts registered as the growth metric.
+--The rate of growth is calculated by taking ((number of hosts registered in the current year - number of hosts registered in the previous year) / the number of hosts registered in the previous year) * 100.
+--I have outputed the year, number of hosts in the current year, number of hosts in the previous year, and the rate of growth. 
+-- And also rounded the rate of growth to the nearest percent.
+SELECT year, current_year_host, prev_year_host,
+ROUND(((current_year_host - prev_year_host)/ prev_year_host :: FLOAT) * 100) AS estimated_growth FROM 
+(SELECT year, current_year_host, 
+LAG(current_year_host,1) OVER (ORDER BY year) AS prev_year_host FROM
+(SELECT EXTRACT(YEAR FROM host_since) AS year, COUNT(DISTINCT id) AS 
+current_year_host FROM airbnb_search_details
+WHERE host_since IS NOT NULL
+GROUP BY year
+ORDER BY year) AS t1) AS t2;
+
+--The average host response rate with a cleaning fee for each zipcode. 
+--I have presented the results as a percentage along with the zip code. The data type for the host_response_rate 
+--column is VARCHAR which is why I have used the FLOAT function below
+SELECT zipcode,
+ROUND(AVG(RTRIM(host_response_rate, '%') :: FLOAT)) AS average_host_response_rate
+FROM airbnb_search_details
+WHERE host_response_rate IS NOT NULL AND
+cleaning_fee = 'True'
+GROUP BY zipcode
+ORDER BY average_host_response_rate;
+
+
+ 
+
