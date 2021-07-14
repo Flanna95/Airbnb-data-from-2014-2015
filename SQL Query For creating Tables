@@ -1,0 +1,115 @@
+CREATE TABLE public.airbnb_search_details
+(id integer,
+ price numeric(8,2),
+ property_type VARCHAR,
+ room_type VARCHAR,
+ amenities VARCHAR,
+ accommodates integer,
+ bathrooms integer,
+ bed_type VARCHAR,
+ cancellation_policy VARCHAR,
+ cleaning_fee bool,
+ city VARCHAR,
+ host_identity_verified VARCHAR,
+ host_response_rate VARCHAR,
+ host_since date,
+ neighbourhood VARCHAR,
+ number_of_reviews integer,
+ review_scores_rating float,
+ zipcode integer,
+ bedrooms integer,
+ beds integer);
+
+
+ CREATE TABLE public.airbnb_apartments
+(host_id INTEGER,
+ apartment_id VARCHAR,
+ apartment_type VARCHAR,
+ n_beds INTEGER,
+ n_bedrooms INTEGER,
+ country VARCHAR,
+ city VARCHAR);
+ 
+ CREATE TABLE public.airbnb_hosts
+ (host_id INTEGER,
+  nationality VARCHAR,
+  gender VARCHAR,
+  age INTEGER);
+  
+CREATE TABLE public.housing_units_completed_us (Medium)
+(year INTEGER,
+ month INTEGER,
+ south NUMERIC(8,2),
+ west NUMERIC(8,2),
+ midwest NUMERIC(8,2),
+ northeast NUMERIC (8,2));
+
+CREATE TABLE public.hotel_reviews
+(hotel_address VARCHAR,
+ additional_number_of_scoring INTEGER,
+ review_date DATE,
+ average_score NUMERIC(10,5),
+ hotel_name VARCHAR,
+ reviewer_nationality VARCHAR,
+ negative_review VARCHAR,
+ review_total_negative_word_counts INTEGER,
+ total_number_of_reviews INTEGER,
+ positive_review VARCHAR,
+ review_total_positive_word_counts INTEGER,
+ total_number_of_reviews_reviewer_has_given INTEGER,
+ reviewer_score NUMERIC (10,5),
+ tags VARCHAR,
+ days_since_review VARCHAR,
+ lat NUMERIC (10,5),
+ lng NUMERIC (10,5));
+
+CREATE TABLE public.airbnb_guests
+(guest_id INTEGER,
+ nationality VARCHAR,
+ gender VARCHAR,
+ age INTEGER);
+
+CREATE TABLE public.airbnb_contacts
+(id_guest VARCHAR,
+ id_host VARCHAR,
+ id_listing VARCHAR,
+ ts_contact_at TIMESTAMP,
+ ts_reply_at TIMESTAMP,
+ ts_accepted_at TIMESTAMP,
+ ts_booking_at TIMESTAMP,
+ ds_checkin DATE,
+ ds_checkout DATE,
+ n_guests INTEGER,
+ n_messages INTEGER);
+
+CREATE TABLE public.airbnb_units
+(host_id INTEGER,
+ unit_id VARCHAR,
+ unit_type VARCHAR,
+ n_beds INTEGER,
+ n_bedrooms INTEGER,
+ country VARCHAR,
+ city VARCHAR)
+
+CREATE TABLE public.airbnb_searches
+(ds DATE,
+ id_user VARCHAR,
+ ds_checkin DATE,
+ ds_checkout DATE,
+ n_searches INTEGER,
+ n_nights INTEGER,
+ n_guests_min INTEGER,
+ n_guests_max INTEGER,
+ origin_country VARCHAR,
+ filter_price_min INTEGER,
+ filter_price_max INTEGER,
+ filter_room_types VARCHAR,
+ filter_neighborhoods VARCHAR);
+
+CREATE TABLE public.airbnb_reviews
+(from_user integer,
+ to_user integer,
+ from_type VARCHAR,
+ to_type VARCHAR
+ review_score integer)
+
